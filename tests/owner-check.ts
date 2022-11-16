@@ -29,6 +29,7 @@ describe("owner-check", () => {
   )
 
   let mint: anchor.web3.PublicKey
+  let withdrawDestination: anchor.web3.PublicKey
   let withdrawDestinationFake: anchor.web3.PublicKey
 
   before(async () => {
@@ -40,11 +41,18 @@ describe("owner-check", () => {
       0
     )
 
-    withdrawDestinationFake = await spl.createAccount(
+    withdrawDestination = await spl.createAccount(
       connection,
       wallet.payer,
       mint,
       wallet.publicKey
+    )
+
+    withdrawDestinationFake = await spl.createAccount(
+      connection,
+      wallet.payer,
+      mint,
+      walletFake.publicKey
     )
 
     await connection.confirmTransaction(
@@ -134,14 +142,26 @@ describe("owner-check", () => {
   })
 
   it("Secure withdraw", async () => {
-    const tx = await program.methods
+    await spl.mintTo(
+      connection,
+      wallet.payer,
+      mint,
+      tokenPDA,
+      wallet.payer,
+      100
+    )
+
+    await program.methods
       .secureWithdraw()
       .accounts({
         vault: vault.publicKey,
         tokenAccount: tokenPDA,
-        withdrawDestination: withdrawDestinationFake,
+        withdrawDestination: withdrawDestination,
         authority: wallet.publicKey,
       })
       .rpc()
+
+    const balance = await connection.getTokenAccountBalance(tokenPDA)
+    expect(balance.value.uiAmount).to.eq(0)
   })
 })
