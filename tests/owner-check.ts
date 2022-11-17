@@ -7,9 +7,6 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
 import { expect } from "chai"
 
 describe("owner-check", () => {
-  // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env())
-
   const provider = anchor.AnchorProvider.env()
   anchor.setProvider(provider)
 
@@ -89,7 +86,7 @@ describe("owner-check", () => {
     expect(balance.value.uiAmount).to.eq(100)
   })
 
-  it("Initialize Vault", async () => {
+  it("Initialize Fake Vault", async () => {
     const tx = await programClone.methods
       .initializeVault()
       .accounts({
@@ -122,7 +119,7 @@ describe("owner-check", () => {
     expect(balance.value.uiAmount).to.eq(0)
   })
 
-  it("Secure withdraw", async () => {
+  it("Secure withdraw, expect error", async () => {
     try {
       const tx = await program.methods
         .secureWithdraw()
