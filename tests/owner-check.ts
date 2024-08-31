@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
-import { Program } from "@coral-xyz/anchor";
+import { Program, Wallet } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { OwnerCheck } from "../target/types/owner_check";
 import { Clone } from "../target/types/clone";
@@ -11,7 +11,7 @@ describe("owner-check", () => {
   anchor.setProvider(provider);
 
   const connection = anchor.getProvider().connection;
-  const wallet = anchor.workspace.OwnerCheck.provider.wallet;
+  const wallet = anchor.workspace.OwnerCheck.provider.wallet as Wallet;
   const walletFake = anchor.web3.Keypair.generate();
 
   const program = anchor.workspace.OwnerCheck as Program<OwnerCheck>;
@@ -94,7 +94,7 @@ describe("owner-check", () => {
   });
 
   it("Initialize Fake Vault should be successful", async () => {
-    const tx = await programClone.methods
+    await programClone.methods
       .initializeVault()
       .accounts({
         vault: vaultClone.publicKey,
@@ -106,7 +106,7 @@ describe("owner-check", () => {
   });
 
   it("Insecure withdraw should be successful", async () => {
-    const tx = await program.methods
+    await program.methods
       .insecureWithdraw()
       .accounts({
         vault: vaultClone.publicKey,
@@ -116,6 +116,41 @@ describe("owner-check", () => {
       .signers([walletFake])
       .rpc();
 
+    const balance = await connection.getTokenAccountBalance(tokenPDA);
+    expect(balance.value.uiAmount).to.eq(0);
+  });
+
+  it("Secure withdraw should throw an error", async () => {
+    try {
+      await program.methods
+        .secureWithdraw()
+        .accounts({
+          vault: vaultClone.publicKey,
+          withdrawDestination: withdrawDestinationFake,
+        })
+        .rpc();
+    } catch (err) {
+      expect(err);
+      console.log(err);
+    }
+  });
+
+  it("Secure withdraw should be successful", async () => {
+    await spl.mintTo(
+      connection,
+      wallet.payer,
+      mint,
+      tokenPDA,
+      wallet.payer,
+      100
+    );
+    await program.methods
+      .secureWithdraw()
+      .accounts({
+        vault: vault.publicKey,
+        withdrawDestination: withdrawDestination,
+      })
+      .rpc();
     const balance = await connection.getTokenAccountBalance(tokenPDA);
     expect(balance.value.uiAmount).to.eq(0);
   });
